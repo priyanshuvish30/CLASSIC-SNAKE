@@ -1,0 +1,6 @@
+{
+  "name": "Snake Game",
+  "description": "A sleek, classic 2D arcade Snake game with a custom neon aesthetic.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

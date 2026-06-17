@@ -1,0 +1,1368 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Retro Arcade Snake Game</title>
+    <!-- Importing high-quality Google Fonts for the absolute retro arcade look -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <style>
+      /* --- Root Custom Variables for High-Contrast Neon Accents --- */
+      :root {
+        --bg-color: #0d0d0d;
+        --cabinet-bg: #1a1a1a;
+        --border-color: #333;
+        --neon-green: #39ff14;
+        --neon-cyan: #00f0ff;
+        --neon-magenta: #ff3131;
+        --neon-yellow: #ffcc00;
+        --text-color: #ffffff;
+      }
+
+      /* Base Resets and Centering Layout */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      body {
+        background-color: var(--bg-color);
+        background-image: 
+          radial-gradient(circle at center, #141414 0%, #060606 100%);
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+        color: var(--text-color);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 1.5rem;
+        overflow-x: hidden;
+      }
+
+      /* Main Retro Arcade Cabinet Frame (Styled as deep immersive card container) */
+      .cabinet-container {
+        width: 100%;
+        max-width: 800px;
+        background: var(--cabinet-bg);
+        border: 4px solid var(--border-color);
+        border-radius: 12px;
+        box-shadow: 
+          0 0 50px rgba(0, 0, 0, 0.5),
+          inset 0 0 20px rgba(0, 0, 0, 0.8);
+        padding: 25px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      /* Marquee Arcade Header Styling */
+      .marquee-header {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        padding: 0;
+        margin: 0;
+      }
+
+      .marquee-logo {
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+        font-size: 24px;
+        font-weight: 900;
+        letter-spacing: 4px;
+        color: #ffffff;
+        text-transform: uppercase;
+        margin: 0;
+        text-align: center;
+      }
+
+      /* LED Numerical Scoreboards and HUD */
+      .score-board {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 40px;
+        margin-bottom: 5px;
+      }
+
+      .score-display {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      .score-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #888;
+        letter-spacing: 2px;
+        margin-bottom: 4px;
+      }
+
+      .score-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: var(--neon-green);
+        text-shadow: 0 0 10px rgba(57, 255, 20, 0.5);
+      }
+
+      .score-value.high-score {
+        color: var(--neon-yellow);
+        text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+      }
+
+      /* Game Screen Housing */
+      .screen-bezel {
+        position: relative;
+        border: 5px solid #222;
+        box-shadow: 0 0 15px rgba(57, 255, 20, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+        background-color: #000;
+        padding: 0;
+      }
+
+      .screen-container {
+        position: relative;
+        background-color: #000;
+        width: 100%;
+        aspect-ratio: 1; /* Keep it perfectly square */
+        overflow: hidden;
+      }
+
+      /* Actual HTML5 Canvas */
+      #gameCanvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        background-color: #000;
+        box-shadow: inset 0 0 10px #000;
+      }
+
+      /* --- Dynamic HUD Overlays (Absolute layers centered over Canvas) --- */
+      .overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        z-index: 10;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        padding: 20px;
+        border-radius: 2px;
+      }
+
+      .overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .overlay-title {
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+        font-weight: 900;
+        font-size: 2.2rem;
+        margin-bottom: 20px;
+        line-height: 1.4;
+        text-transform: uppercase;
+        letter-spacing: 4px;
+        color: #ffffff;
+      }
+
+      .insert-coin {
+        color: #ffffff;
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        font-weight: 900;
+      }
+
+      .color-green {
+        color: var(--neon-green);
+        text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+      }
+
+      .color-magenta {
+        font-size: 48px;
+        color: var(--neon-magenta);
+        text-transform: uppercase;
+        font-weight: 900;
+        letter-spacing: 8px;
+        margin-bottom: 10px;
+        text-shadow: 0 0 20px rgba(255, 49, 49, 0.8);
+      }
+
+      .crown-animation {
+        font-size: 1.8rem;
+        color: var(--neon-yellow);
+        text-shadow: 0 0 12px var(--neon-yellow);
+        margin-bottom: 12px;
+        animation: bounce 1s infinite alternate;
+      }
+
+      @keyframes bounce {
+        from { transform: translateY(0px) scale(1); }
+        to { transform: translateY(-5px) scale(1.1); }
+      }
+
+      /* Selection Buttons style inside Overlays */
+      .difficulty-selector {
+        width: 100%;
+        max-width: 280px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 15px 0 25px 0;
+      }
+
+      .selector-label {
+        font-size: 11px;
+        color: #666;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+
+      .btn-row {
+        display: flex;
+        gap: 8px;
+        justify-content: space-between;
+      }
+
+      .btn-arcade {
+        flex: 1;
+        background: transparent;
+        border: 2px solid #555;
+        border-radius: 4px;
+        color: #888;
+        font-size: 0.8rem;
+        font-weight: bold;
+        padding: 8px 5px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .btn-arcade:hover {
+        border-color: #888;
+        color: #fff;
+      }
+
+      .btn-arcade.active-easy {
+        border-color: var(--neon-cyan);
+        color: var(--neon-cyan);
+        box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+      }
+
+      .btn-arcade.active-medium {
+        border-color: var(--neon-green);
+        color: var(--neon-green);
+        box-shadow: 0 0 10px rgba(57, 255, 20, 0.3);
+      }
+
+      .btn-arcade.active-hard {
+        border-color: var(--neon-magenta);
+        color: var(--neon-magenta);
+        box-shadow: 0 0 10px rgba(255, 49, 49, 0.3);
+      }
+
+      /* Standard Immersive Large Glowing Neon Buttons */
+      .btn-play {
+        display: inline-block;
+        padding: 12px 30px;
+        background: transparent;
+        border: 2px solid var(--neon-green);
+        color: var(--neon-green);
+        font-size: 18px;
+        font-weight: 700;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.2s;
+        letter-spacing: 2px;
+        border-radius: 4px;
+        outline: none;
+      }
+
+      .btn-play:hover {
+        background: var(--neon-green);
+        color: #000;
+        box-shadow: 0 0 20px var(--neon-green);
+      }
+
+      .btn-play:active {
+        transform: scale(0.98);
+      }
+
+      .btn-play.danger {
+        border-color: var(--neon-magenta);
+        color: var(--neon-magenta);
+      }
+
+      .btn-play.danger:hover {
+        background: var(--neon-magenta);
+        color: #000;
+        box-shadow: 0 0 20px var(--neon-magenta);
+      }
+
+      /* CRT Scanline & Glare Effects (Toggleable) */
+      .crt-active .screen-container::after {
+        content: " ";
+        display: block;
+        position: absolute;
+        top: 0; left: 0; bottom: 0; right: 0;
+        background: 
+          linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%),
+          linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.05));
+        z-index: 15;
+        background-size: 100% 4px, 6px 100%;
+        pointer-events: none;
+        opacity: 0.22;
+      }
+
+      .crt-active::before {
+        content: " ";
+        display: block;
+        position: absolute;
+        top: 0; left: 0; bottom: 0; right: 0;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.04) 0%, rgba(0, 0, 0, 0.15) 100%);
+        z-index: 12;
+        pointer-events: none;
+      }
+
+      /* Machine Console Control Deck Panel */
+      .control-deck {
+        background: #111;
+        border: 2px solid #222;
+        border-radius: 8px;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+      }
+
+      /* Navigation D-pad and Steering Buttons */
+      .dpad-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        gap: 8px;
+        width: 140px;
+        height: 140px;
+      }
+
+      .dpad-btn {
+        background: #151515;
+        border: 2px solid #333;
+        border-radius: 6px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #888;
+        font-size: 1.3rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .dpad-btn:active {
+        transform: translateY(1px);
+      }
+
+      /* Positional Layout grids for D-Pad coordinates */
+      .dpad-btn.up { grid-column: 2; grid-row: 1; border-color: var(--neon-green); color: var(--neon-green); }
+      .dpad-btn.left { grid-column: 1; grid-row: 2; border-color: var(--neon-green); color: var(--neon-green); }
+      .dpad-btn.right { grid-column: 3; grid-row: 2; border-color: var(--neon-green); color: var(--neon-green); }
+      .dpad-btn.down { grid-column: 2; grid-row: 3; border-color: var(--neon-green); color: var(--neon-green); }
+      .dpad-center { grid-column: 2; grid-row: 2; background: #000; border: none; cursor: default; border-radius: 50%; pointer-events: none;}
+
+      /* Active Glow on Steering Interaction */
+      .dpad-btn:hover {
+        background: #222;
+        color: #ffffff;
+      }
+      .dpad-btn.up:active { box-shadow: 0 0 10px rgba(57, 255, 20, 0.4); }
+      .dpad-btn.left:active { box-shadow: 0 0 10px rgba(57, 255, 20, 0.4); }
+      .dpad-btn.right:active { box-shadow: 0 0 10px rgba(57, 255, 20, 0.4); }
+      .dpad-btn.down:active { box-shadow: 0 0 10px rgba(57, 255, 20, 0.4); }
+
+      /* Accessory Panel: Toggles & Volume Settings */
+      .utility-bar {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        padding-top: 5px;
+        border-top: 1px dashed #222;
+      }
+
+      .util-toggle {
+        background: transparent;
+        border: 1px solid #333;
+        border-radius: 4px;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        color: #666;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+        text-transform: uppercase;
+        font-weight: bold;
+        letter-spacing: 1px;
+      }
+
+      .util-toggle:hover {
+        color: #fff;
+        border-color: #666;
+      }
+
+      .util-toggle.active {
+        border-color: var(--neon-green);
+        color: var(--neon-green);
+        background: rgba(57, 255, 20, 0.05);
+        box-shadow: 0 0 8px rgba(57, 255, 20, 0.1);
+      }
+
+      .util-toggle svg {
+        width: 14px;
+        height: 14px;
+        fill: currentColor;
+      }
+
+      /* Retro Keyboard Legend Display (Controls hint) */
+      .legend-panel {
+        display: flex;
+        gap: 20px;
+        color: #555;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        justify-content: center;
+        flex-wrap: wrap;
+        text-align: center;
+        border-top: 1px solid #222;
+        padding-top: 12px;
+        width: 100%;
+      }
+
+      .kb-key {
+        border: 1px solid #444;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-right: 4px;
+        color: #888;
+        font-family: inherit;
+        font-size: 0.75rem;
+      }
+
+      /* Responsive Adjustments */
+      @media (max-width: 480px) {
+        .score-board {
+          padding: 0 15px;
+        }
+        .score-value {
+          font-size: 26px;
+        }
+        .cabinet-container {
+          padding: 15px;
+        }
+        .overlay-title {
+          font-size: 1.6rem;
+        }
+        .color-magenta {
+          font-size: 32px;
+        }
+        .legend-panel {
+          gap: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+
+    <!-- Main styled retro arcade container cabinet -->
+    <div class="cabinet-container" id="arcadeFrame">
+      
+      <!-- Top Neon Marquee -->
+      <div class="marquee-header">
+        <h1 class="marquee-logo">S N A K E</h1>
+      </div>
+
+      <!-- Live LED Scoreboard HUD -->
+      <div class="score-board">
+        <div class="score-display">
+          <span class="score-label">Score</span>
+          <div class="score-value" id="currentScoreVal">000</div>
+        </div>
+        <div class="score-display" style="align-items: flex-end;">
+          <span class="score-label">HI Score</span>
+          <div class="score-value high-score" id="highScoreVal">000</div>
+        </div>
+      </div>
+
+      <!-- Main CRT Screen Box -->
+      <div class="screen-bezel">
+        <div class="screen-container crt-active" id="screenContainer">
+          
+          <!-- Web Canvas for Snake Grid Engine -->
+          <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+          <!-- OVERLAY 1: START SCREEN -->
+          <div class="overlay active" id="startOverlay">
+            <h2 class="overlay-title insert-coin">INSERT COIN<br>TO BEGIN</h2>
+            
+            <div class="difficulty-selector">
+              <span class="selector-label">Select Difficulty</span>
+              <div class="btn-row">
+                <button class="btn-arcade" id="btnEasy">Easy</button>
+                <button class="btn-arcade active-medium" id="btnMedium">Medium</button>
+                <button class="btn-arcade" id="btnHard">Hard</button>
+              </div>
+            </div>
+
+            <button class="btn-play" id="btnStartGame">START PLAY</button>
+          </div>
+
+          <!-- OVERLAY 2: GAME OVER SCREEN -->
+          <div class="overlay" id="gameOverOverlay">
+            <!-- New High Score celebration icon shown conditionally -->
+            <div id="newHighScoreCrown" style="display: none;">
+              <div class="crown-animation">👑</div>
+              <p class="color-green" style="font-family: 'Press Start 2P', cursive; font-size: 0.65rem; margin-bottom: 8px;">NEW HIGH SCORE!</p>
+            </div>
+            
+            <h2 class="overlay-title color-magenta" style="font-size: 1.6rem; animation: blink 1s infinite step-end;">GAME OVER</h2>
+            <p style="margin-bottom: 20px; font-size: 1.1rem; color: #ccc;">Your Score: <span class="color-green" id="finalScoreVal" style="font-weight: bold;">0</span></p>
+            
+            <button class="btn-play danger" id="btnRestartGame">RESTART [SPACE]</button>
+          </div>
+
+          <!-- OVERLAY 3: PAUSE LAYER -->
+          <div class="overlay" id="pauseOverlay" style="background-color: rgba(9, 9, 11, 0.75);">
+            <h2 class="overlay-title insert-coin" style="font-size: 1.5rem; letter-spacing: 2px;">PAUSED</h2>
+            <p style="color: #999; font-size: 0.9rem;">Press <span class="kb-key">P</span> or click overlay to resume</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Console Control Deck: D-Pad & System Settings -->
+      <div class="control-deck">
+        
+        <!-- Touch/Click Steering Controls -->
+        <div class="dpad-container">
+          <button class="dpad-btn up" id="dpadUp" title="Go Up">▲</button>
+          <button class="dpad-btn left" id="dpadLeft" title="Go Left">◀</button>
+          <div class="dpad-center"></div>
+          <button class="dpad-btn right" id="dpadRight" title="Go Right">▶</button>
+          <button class="dpad-btn down" id="dpadDown" title="Go Down">▼</button>
+        </div>
+
+        <!-- Utility settings bar with CRT Scanline and Audio toggles -->
+        <div class="utility-bar">
+          <button class="util-toggle active" id="toggleCrt" title="Toggle retro screen styling">
+            <!-- Retro monitor icon SVG -->
+            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M21,16a1,1,0,0,0,1-1V5a3,3,0,0,0-3-3H5A3,3,0,0,0,2,5v10a1,1,0,0,0,1,1H8v2H5a1,1,0,0,0,0,2H19a1,1,0,0,0,0-2H16V18h3.18c.09,0,.18,0,.27-.05ZM5,4H19a1,1,0,0,1,1,1v8H4V5A1,1,0,0,1,5,4Z"/></svg>
+            CRT Filter
+          </button>
+
+          <button class="util-toggle" id="toggleMute" title="Toggle audio sound FX">
+            <!-- Speaker volume icon SVG -->
+            <svg id="muteIcon" viewBox="0 0 24 24"><path fill="currentColor" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.77 16.5,12M3,9V15H7L12,20V4L7,9H3Z"/></svg>
+            <span id="muteBtnText">Unmuted</span>
+          </button>
+        </div>
+
+        <!-- Desktop Controls Reference -->
+        <div class="legend-panel">
+          Steer with <span class="kb-key">▲</span><span class="kb-key">▼</span><span class="kb-key">◀</span><span class="kb-key">▶</span> or <span class="kb-key">W</span><span class="kb-key">A</span><span class="kb-key">S</span><span class="kb-key">D</span><br>
+          Press <span class="kb-key">P</span> to Pause | <span class="kb-key">Space</span> to start or restart
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- --- Game Script Engine --- -->
+    <script>
+      // --- Initialization of Application Variables & HTML references ---
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const startOverlay = document.getElementById('startOverlay');
+      const gameOverOverlay = document.getElementById('gameOverOverlay');
+      const pauseOverlay = document.getElementById('pauseOverlay');
+      const screenContainer = document.getElementById('screenContainer');
+      const newHighScoreCrown = document.getElementById('newHighScoreCrown');
+      const currentScoreVal = document.getElementById('currentScoreVal');
+      const highScoreVal = document.getElementById('highScoreVal');
+      const finalScoreVal = document.getElementById('finalScoreVal');
+
+      // Utility Toggles
+      const toggleCrtBtn = document.getElementById('toggleCrt');
+      const toggleMuteBtn = document.getElementById('toggleMute');
+      const muteIcon = document.getElementById('muteIcon');
+      const muteBtnText = document.getElementById('muteBtnText');
+
+      // Control Buttons
+      const btnStartGame = document.getElementById('btnStartGame');
+      const btnRestartGame = document.getElementById('btnRestartGame');
+      const btnEasy = document.getElementById('btnEasy');
+      const btnMedium = document.getElementById('btnMedium');
+      const btnHard = document.getElementById('btnHard');
+
+      // Directional steering buttons
+      const dpadUp = document.getElementById('dpadUp');
+      const dpadDown = document.getElementById('dpadDown');
+      const dpadLeft = document.getElementById('dpadLeft');
+      const dpadRight = document.getElementById('dpadRight');
+
+      // --- Dimensions & Constant parameters ---
+      const canvasSize = 400; // grid size boundary: 400x400
+      const gridSize = 20;    // Size of individual block in pixels
+      const gridCols = canvasSize / gridSize; // 20 units
+      const gridRows = canvasSize / gridSize; // 20 units
+
+      // --- Game Dynamics State variables ---
+      let snake = [];
+      let food = { x: 0, y: 0 };
+      
+      // Directions: current queued direction and last actual tick direction to resolve instant turning logic bugs
+      let currentDir = { x: 1, y: 0 };
+      let lastExecutedDir = { x: 1, y: 0 }; 
+
+      // Scores
+      let score = 0;
+      let highScore = parseInt(localStorage.getItem('retro_snake_highscore') || '0', 10);
+      let newHighScoreUnlocked = false;
+
+      // Dynamic Clock tickers for delta time frame looping
+      let gameInterval = null;
+      let lastTickTime = 0;
+      
+      // States
+      let isStartScreen = true;
+      let isPaused = false;
+      let isGameOver = false;
+
+      // Difficulty speeds (Tick rate/movement frame triggers in milliseconds) and multipliers
+      const DIFFICULTIES = {
+        easy: { speed: 175, scoreMult: 10 },
+        medium: { speed: 100, scoreMult: 20 },
+        hard: { speed: 65, scoreMult: 35 }
+      };
+      let currentDifficultyStr = 'medium';
+
+      // Visual effects arrays
+      let particles = [];
+      let shakeMagnitude = 0;
+
+      // Audio setup properties
+      let audioCtx = null;
+      let isMuted = false;
+
+      // Load initial high score on boot
+      updateScoreboardDisplays();
+
+      // --- Retro Synthesized Audio System ---
+      // Utilizing native Web Audio API to construct clean, zero-file chiptune acoustics
+      function playSound(type) {
+        if (isMuted) return;
+
+        try {
+          // Initialize AudioContext lazily to account for user-interaction autoplay bounds
+          if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          }
+
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          const now = audioCtx.currentTime;
+
+          switch (type) {
+            case 'eat':
+              // Standard retro arcade food consumption sound arpeggio
+              osc.type = 'triangle';
+              osc.frequency.setValueAtTime(392.00, now); // G4
+              osc.frequency.setValueAtTime(523.25, now + 0.08); // C5
+              osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+              gain.gain.setValueAtTime(0.2, now);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+              osc.start(now);
+              osc.stop(now + 0.3);
+              break;
+
+            case 'move':
+              // Tiny click/pop when steering to feel tactile
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(220, now);
+              osc.frequency.exponentialRampToValueAtTime(80, now + 0.04);
+              gain.gain.setValueAtTime(0.08, now);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + 0.04);
+              osc.start(now);
+              osc.stop(now + 0.04);
+              break;
+
+            case 'select':
+              // Short high beep on button selection
+              osc.type = 'square';
+              osc.frequency.setValueAtTime(587.33, now); // D5
+              gain.gain.setValueAtTime(0.12, now);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+              osc.start(now);
+              osc.stop(now + 0.1);
+              break;
+
+            case 'crash':
+              // Retro bass pitch sweep downward with noise vibe
+              osc.type = 'sawtooth';
+              osc.frequency.setValueAtTime(180, now);
+              osc.frequency.linearRampToValueAtTime(30, now + 0.55);
+              gain.gain.setValueAtTime(0.35, now);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+              osc.start(now);
+              osc.stop(now + 0.6);
+              break;
+          }
+        } catch (e) {
+          console.warn('Audio context initialization prevented or unsupported:', e);
+        }
+      }
+
+      // --- Visual FX: Particle system ---
+      function createEatenParticles(x, y) {
+        // Red, pink, and yellow glitter sparkles bursting radially upon eating
+        const cx = x * gridSize + gridSize / 2;
+        const cy = y * gridSize + gridSize / 2;
+
+        for (let i = 0; i < 15; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 1.2 + Math.random() * 3.5;
+          particles.push({
+            x: cx,
+            y: cy,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            color: Math.random() > 0.4 ? '#ff1a40' : (Math.random() > 0.5 ? '#fff' : '#ffcc00'),
+            radius: 1.5 + Math.random() * 2,
+            alpha: 1.0,
+            decay: 0.02 + Math.random() * 0.04
+          });
+        }
+      }
+
+      function createCrashParticles(x, y) {
+        // High-volume neon green and white fragments when hitting head on bounds
+        const cx = x * gridSize + gridSize / 2;
+        const cy = y * gridSize + gridSize / 2;
+
+        for (let i = 0; i < 24; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 1.0 + Math.random() * 4.5;
+          particles.push({
+            x: cx,
+            y: cy,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            color: i % 2 === 0 ? '#39ff14' : '#ff0055',
+            radius: 2.0 + Math.random() * 2.5,
+            alpha: 1.0,
+            decay: 0.015 + Math.random() * 0.025
+          });
+        }
+      }
+
+      function updateParticles() {
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.alpha -= p.decay;
+          if (p.alpha <= 0) {
+            particles.splice(i, 1);
+          }
+        }
+      }
+
+      function drawParticles() {
+        ctx.save();
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.alpha;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function applyScreenShake(amount) {
+        shakeMagnitude = amount;
+      }
+
+      // --- Core Movement logic & Grid boundary colliders ---
+      function startGame() {
+        playSound('select');
+        
+        isStartScreen = false;
+        isPaused = false;
+        isGameOver = false;
+        newHighScoreUnlocked = false;
+        score = 0;
+
+        startOverlay.classList.remove('active');
+        gameOverOverlay.classList.remove('active');
+        newHighScoreCrown.style.display = 'none';
+
+        // Prepare starting snake body layout (Horizontal pointing right in grid center)
+        snake = [
+          { x: 10, y: 10 },
+          { x: 9, y: 10 },
+          { x: 8, y: 10 }
+        ];
+
+        currentDir = { x: 1, y: 0 };
+        lastExecutedDir = { x: 1, y: 0 };
+
+        spawnNewFood();
+        updateScoreboardDisplays();
+
+        lastTickTime = performance.now();
+        
+        // Start animation frame loop if it's not already running
+        if (!gameInterval) {
+          gameInterval = requestAnimationFrame(runAnimationFrame);
+        }
+      }
+
+      function applyGameOver() {
+        isGameOver = true;
+        playSound('crash');
+        applyScreenShake(18);
+
+        // Crash location explosion particles
+        createCrashParticles(snake[0].x, snake[0].y);
+
+        // Update score display details
+        finalScoreVal.textContent = score;
+        
+        if (newHighScoreUnlocked) {
+          newHighScoreCrown.style.display = 'block';
+        }
+
+        gameOverOverlay.classList.add('active');
+      }
+
+      function togglePause() {
+        if (isGameOver || isStartScreen) return;
+        
+        isPaused = !isPaused;
+        playSound('select');
+
+        if (isPaused) {
+          pauseOverlay.classList.add('active');
+        } else {
+          pauseOverlay.classList.remove('active');
+          lastTickTime = performance.now(); // reset delta to prevent instant tick jump
+        }
+      }
+
+      function restartGame() {
+        startGame();
+      }
+
+      function spawnNewFood() {
+        let validPosition = false;
+        let newX, newY;
+        let attempts = 0;
+
+        // Ensure newly generated food coordinates do not clip with snake parts
+        while (!validPosition && attempts < 1000) {
+          newX = Math.floor(Math.random() * gridCols);
+          newY = Math.floor(Math.random() * gridRows);
+
+          validPosition = true;
+          for (let i = 0; i < snake.length; i++) {
+            if (snake[i].x === newX && snake[i].y === newY) {
+              validPosition = false;
+              break;
+            }
+          }
+          attempts++;
+        }
+
+        food = { x: newX, y: newY };
+      }
+
+      // --- Engine state update tick logic ---
+      function updateGamePhysics() {
+        if (isGameOver || isPaused || isStartScreen) return;
+
+        // Synchronize direction queues to block rapid double-tapping reverse collision bug
+        lastExecutedDir = { ...currentDir };
+
+        const head = snake[0];
+        const nextHead = {
+          x: head.x + currentDir.x,
+          y: head.y + currentDir.y
+        };
+
+        // Wall Collision
+        if (nextHead.x < 0 || nextHead.x >= gridCols || nextHead.y < 0 || nextHead.y >= gridRows) {
+          applyGameOver();
+          return;
+        }
+
+        // Self Body collision
+        for (let i = 0; i < snake.length; i++) {
+          if (snake[i].x === nextHead.x && snake[i].y === nextHead.y) {
+            applyGameOver();
+            return;
+          }
+        }
+
+        // Advance snake positioning
+        snake.unshift(nextHead);
+
+        // Check if mouth reached food coordinate
+        if (nextHead.x === food.x && nextHead.y === food.y) {
+          // Food swallowed
+          const gainScore = DIFFICULTIES[currentDifficultyStr].scoreMult;
+          score += gainScore;
+          
+          playSound('eat');
+          createEatenParticles(food.x, food.y);
+          applyScreenShake(8);
+
+          // Update High Score persistence checks
+          if (score > highScore) {
+            highScore = score;
+            localStorage.setItem('retro_snake_highscore', highScore);
+            newHighScoreUnlocked = true;
+          }
+
+          updateScoreboardDisplays();
+          spawnNewFood();
+        } else {
+          // Remove tail block if food was not eaten
+          snake.pop();
+        }
+      }
+
+      // --- High Visual Polish Canvas drawing operations ---
+      function runAnimationFrame(time) {
+        gameInterval = requestAnimationFrame(runAnimationFrame);
+
+        const currentSpeedMs = DIFFICULTIES[currentDifficultyStr].speed;
+        const delta = time - lastTickTime;
+
+        // Separate constant physics clock updates from standard 60FPS visuals
+        if (delta >= currentSpeedMs) {
+          updateGamePhysics();
+          lastTickTime = time - (delta % currentSpeedMs);
+        }
+
+        // Secondary tick systems for ultra-smooth rendering animations
+        updateParticles();
+        renderCanvasFrame();
+      }
+
+      function renderCanvasFrame() {
+        // Save state context for screen vibration triggers
+        ctx.save();
+        
+        ctx.clearRect(0, 0, canvasSize, canvasSize);
+
+        // Build active screen shaking transform decay offset
+        if (shakeMagnitude > 0.05) {
+          const dx = (Math.random() - 0.5) * shakeMagnitude;
+          const dy = (Math.random() - 0.5) * shakeMagnitude;
+          ctx.translate(dx, dy);
+          shakeMagnitude *= 0.88; // decay factor
+        }
+
+        // 1. Draw smooth retro deep grid gridlines
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x <= canvasSize; x += gridSize) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, canvasSize);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= canvasSize; y += gridSize) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(canvasSize, y);
+          ctx.stroke();
+        }
+
+        // 2. Render cherry red retro shaded apple food item
+        drawFood(food.x, food.y);
+
+        // 3. Render neon green segmented snake
+        if (snake.length > 0) {
+          // Draw individual tail trailing segments first so mouth overlays them nicely
+          for (let i = snake.length - 1; i > 0; i--) {
+            drawSnakeBodySegment(snake[i].x, snake[i].y, i, snake.length);
+          }
+          // Highlight head segment
+          drawSnakeHead(snake[0].x, snake[0].y);
+        }
+
+        // 4. Draw glitter sparks
+        drawParticles();
+
+        // Restore shake transforms
+        ctx.restore();
+      }
+
+      // Render complex glossy double-lobe red food apple with stem and organic leaf
+      function drawFood(x, y) {
+        const radius = gridSize / 2;
+        const cx = x * gridSize + radius;
+        const cy = y * gridSize + radius;
+
+        ctx.save();
+        
+        // Soft radial glow aura
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = '#ff2a55';
+
+        // Dual arc lobe styling
+        ctx.fillStyle = '#ff1a40';
+        ctx.beginPath();
+        ctx.arc(cx - 2, cy + 1, radius * 0.72, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#ff3c66';
+        ctx.beginPath();
+        ctx.arc(cx + 2, cy + 1, radius * 0.72, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Shrub reflection light dot
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(cx - 3, cy - 3, radius * 0.22, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Wooden brown stem
+        ctx.strokeStyle = '#8b5a2b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy - radius * 0.4);
+        ctx.quadraticCurveTo(cx + 3, cy - radius * 1.1, cx + radius * 0.5, cy - radius * 1.1);
+        ctx.stroke();
+
+        // Small green foliage leaf
+        ctx.fillStyle = '#39ff14';
+        ctx.beginPath();
+        ctx.ellipse(cx + radius * 0.45, cy - radius * 1.0, radius * 0.32, radius * 0.16, Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // Render gorgeous neon shaded rotation-accurate head styling
+      function drawSnakeHead(x, y) {
+        const cx = x * gridSize + gridSize / 2;
+        const cy = y * gridSize + gridSize / 2;
+        const radius = gridSize / 2;
+
+        ctx.save();
+
+        // Canvas drop shadow neon lighting glow
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#39ff14';
+
+        // Rounded head profile
+        ctx.fillStyle = '#39ff14';
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius * 0.92, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Rotation mapping alignment matching queued movement direction vectors
+        let angle = 0;
+        if (currentDir.x === 1) angle = 0;
+        else if (currentDir.x === -1) angle = Math.PI;
+        else if (currentDir.y === 1) angle = Math.PI / 2;
+        else if (currentDir.y === -1) angle = -Math.PI / 2;
+
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+
+        // Draw classic arcade glowing yellow eye sockets
+        ctx.fillStyle = '#060a06'; 
+        ctx.beginPath();
+        ctx.arc(radius * 0.3, -radius * 0.4, radius * 0.26, 0, Math.PI * 2);
+        ctx.arc(radius * 0.3, radius * 0.4, radius * 0.26, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Tiny yellow glowing pupils pointing forward
+        ctx.fillStyle = '#ffea00';
+        ctx.beginPath();
+        ctx.arc(radius * 0.35, -radius * 0.4, radius * 0.12, 0, Math.PI * 2);
+        ctx.arc(radius * 0.35, radius * 0.4, radius * 0.12, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // Draw rounded trailing body segments with organic tapering thickness & chromatic shifting hue
+      function drawSnakeBodySegment(x, y, index, totalLength) {
+        const gap = 1.5;
+        
+        // Taper: head-attached parts are thick; tail structures taper down softly
+        const progress = index / totalLength; // ranges from 0 to 1 as it reaches the head
+        const scaleFactor = 0.6 + 0.4 * progress; 
+        const segmentSize = gridSize * scaleFactor - gap * 2;
+        const offset = (gridSize - segmentSize) / 2;
+
+        const sx = x * gridSize + offset;
+        const sy = y * gridSize + offset;
+
+        ctx.save();
+
+        // Shifting Hue: snake transitions from green near head to turquoise near the tail
+        const colorHue = 120 + (80 * (1 - progress)); 
+
+        ctx.fillStyle = `hsl(${colorHue}, 100%, 48%)`;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = `hsl(${colorHue}, 100%, 45%)`;
+
+        // Modern curved rounded shape segment representation instead of rough blocks
+        ctx.beginPath();
+        ctx.roundRect(sx, sy, segmentSize, segmentSize, 5 * scaleFactor);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // --- Settings updates & UI display syncing helpers ---
+      function updateScoreboardDisplays() {
+        // Pads score numbers with leading zeros like classic hardware arcade systems
+        const formatScore = (num) => String(num).padStart(3, '0');
+        
+        currentScoreVal.textContent = formatScore(score);
+        highScoreVal.textContent = formatScore(highScore);
+      }
+
+      function changeDifficulty(diff) {
+        if (!DIFFICULTIES[diff]) return;
+        playSound('select');
+        
+        currentDifficultyStr = diff;
+
+        // Synchronize active toggle classes across selection buttons
+        btnEasy.className = 'btn-arcade' + (diff === 'easy' ? ' active-easy' : '');
+        btnMedium.className = 'btn-arcade' + (diff === 'medium' ? ' active-medium' : '');
+        btnHard.className = 'btn-arcade' + (diff === 'hard' ? ' active-hard' : '');
+      }
+
+      // --- Interactive Controls: Keyboard steering commands mapping ---
+      window.addEventListener('keydown', (e) => {
+        // space bar or enter to begin/reset
+        if (e.code === 'Space' || e.code === 'Enter') {
+          e.preventDefault();
+          if (isStartScreen) {
+            startGame();
+          } else if (isGameOver) {
+            startGame();
+          } else {
+            togglePause();
+          }
+          return;
+        }
+
+        // P key to trigger immediate game pauses
+        if (e.code === 'KeyP') {
+          e.preventDefault();
+          togglePause();
+          return;
+        }
+
+        if (isGameOver || isStartScreen || isPaused) return;
+
+        let nextX = 0;
+        let nextY = 0;
+        let triggered = false;
+
+        switch (e.code) {
+          case 'ArrowUp':
+          case 'KeyW':
+            nextX = 0; nextY = -1;
+            triggered = true;
+            break;
+          case 'ArrowDown':
+          case 'KeyS':
+            nextX = 0; nextY = 1;
+            triggered = true;
+            break;
+          case 'ArrowLeft':
+          case 'KeyA':
+            nextX = -1; nextY = 0;
+            triggered = true;
+            break;
+          case 'ArrowRight':
+          case 'KeyD':
+            nextX = 1; nextY = 0;
+            triggered = true;
+            break;
+        }
+
+        if (triggered) {
+          e.preventDefault();
+          
+          // Strict block preventing instant reversed self-collision crashes
+          const isReversal = (nextX !== 0 && nextX === -lastExecutedDir.x) || 
+                            (nextY !== 0 && nextY === -lastExecutedDir.y);
+          
+          if (!isReversal) {
+            currentDir = { x: nextX, y: nextY };
+            playSound('move');
+          }
+        }
+      });
+
+      // Keyboard space blocker on page down scroll
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && (e.target === document.body)) {
+          e.preventDefault();
+        }
+      });
+
+      // --- Steering Triggering buttons for responsive mobile support ---
+      function handleDirectionInput(dx, dy) {
+        if (isGameOver || isStartScreen || isPaused) return;
+
+        const isReversal = (dx !== 0 && dx === -lastExecutedDir.x) || 
+                          (dy !== 0 && dy === -lastExecutedDir.y);
+        
+        if (!isReversal) {
+          currentDir = { x: dx, y: dy };
+          playSound('move');
+        }
+      }
+
+      dpadUp.addEventListener('click', () => handleDirectionInput(0, -1));
+      dpadDown.addEventListener('click', () => handleDirectionInput(0, 1));
+      dpadLeft.addEventListener('click', () => handleDirectionInput(-1, 0));
+      dpadRight.addEventListener('click', () => handleDirectionInput(1, 0));
+
+      // Easy click resume feature when clicking on the transparent pause filter overlay
+      pauseOverlay.addEventListener('click', togglePause);
+
+      // --- System settings listeners (CRT, sound volume toggles) ---
+      toggleCrtBtn.addEventListener('click', () => {
+        playSound('select');
+        const screen = document.getElementById('screenContainer');
+        screen.classList.toggle('crt-active');
+        toggleCrtBtn.classList.toggle('active');
+      });
+
+      // Mute audio toggling click updates
+      toggleMuteBtn.addEventListener('click', () => {
+        isMuted = !isMuted;
+        
+        // Update selection UI indicator states
+        if (isMuted) {
+          toggleMuteBtn.classList.remove('active');
+          muteBtnText.textContent = 'Muted';
+          // Mute volume icon SVG path change
+          muteIcon.innerHTML = '<path fill="currentColor" d="M3.27,1.44L2,2.72L5.28,6H3V12H7L12,17V12.73L16.27,17C15.6,17.5 14.84,17.87 14,18.06V20.13C15.39,19.9 16.68,19.29 17.75,18.44L20.27,20.96L21.54,19.69L3.27,1.44M12,4L9.91,6.09L12,8.18V4M19,12C19,13.11 18.73,14.16 18.26,15.1L19.79,16.63C20.55,15.26 21,13.68 21,12C21,7.72 18,4.14 14,3.23V5.29C16.89,6.15 19,8.83 19,12M14,7.97V10.18L16.42,12.6C16.47,12.4 16.5,12.21 16.5,12C16.5,10.23 15.5,8.71 14,7.97Z"/>';
+        } else {
+          toggleMuteBtn.classList.add('active');
+          muteBtnText.textContent = 'Unmuted';
+          // Full volume speaker SVG
+          muteIcon.innerHTML = '<path fill="currentColor" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.77 16.5,12M3,9V15H7L12,20V4L7,9H3Z"/>';
+          playSound('select');
+        }
+      });
+
+      // Easy setup trigger listeners
+      btnEasy.addEventListener('click', () => changeDifficulty('easy'));
+      btnMedium.addEventListener('click', () => changeDifficulty('medium'));
+      btnHard.addEventListener('click', () => changeDifficulty('hard'));
+
+      btnStartGame.addEventListener('click', startGame);
+      btnRestartGame.addEventListener('click', restartGame);
+
+      // --- Draw the initial idle scene onto the canvas on boot ---
+      function drawSplashGrid() {
+        ctx.clearRect(0, 0, canvasSize, canvasSize);
+        // Subtle grid lines
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x <= canvasSize; x += gridSize) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, canvasSize);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= canvasSize; y += gridSize) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(canvasSize, y);
+          ctx.stroke();
+        }
+
+        // Dummy glowing objects for layout aesthetic background
+        drawFood(14, 10);
+        drawSnakeBodySegment(3, 10, 0, 4);
+        drawSnakeBodySegment(4, 10, 1, 4);
+        drawSnakeBodySegment(5, 10, 2, 4);
+        
+        // head direction mock pointing right
+        ctx.save();
+        const headCx = 6 * gridSize + gridSize/2;
+        const headCy = 10 * gridSize + gridSize/2;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#39ff14';
+        ctx.fillStyle = '#39ff14';
+        ctx.beginPath();
+        ctx.arc(headCx, headCy, gridSize/2 * 0.92, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#060a06';
+        ctx.beginPath();
+        ctx.arc(headCx + 3, headCy - 4, 2.5, 0, Math.PI * 2);
+        ctx.arc(headCx + 3, headCy + 4, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffea00';
+        ctx.beginPath();
+        ctx.arc(headCx + 4, headCy - 4, 1.2, 0, Math.PI * 2);
+        ctx.arc(headCx + 4, headCy + 4, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Render default elements inside first splash render
+      drawSplashGrid();
+
+    </script>
+  </body>
+</html>
